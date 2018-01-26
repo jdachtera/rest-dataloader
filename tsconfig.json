@@ -11,7 +11,8 @@
     "noUnusedParameters": true,
     "pretty": true,
     "skipLibCheck": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "lib": ["es2015", "esnext", "dom"]
   },
   "exclude": ["node_modules", "**/node_modules/*"]
 }
