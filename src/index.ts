@@ -1,72 +1,67 @@
-import DataLoader from "dataloader";
-import merge from "lodash/merge";
+import DataLoader from 'dataloader';
+import merge from 'lodash/merge';
 
-type LoaderRequest = {
-  url: RequestInfo;
-  config: RequestInit;
+import { MiddlewareProcessor } from './MiddlewareProcessor';
+
+type RequestConfig = RequestInit & {
+  fetch: GlobalFetch;
 };
 
-class AsyncMiddleware {
-  private callbacks = [];
-  use(callback) {
-    this.callbacks.push(callback);
-  }
+type ApiRequest = {
+  url: RequestInfo;
+  config: RequestConfig;
+};
 
-  process = async (data: any) => {
-    let index = 0;
+export class RestApi {
+  public onRequest = new MiddlewareProcessor<ApiRequest, ApiRequest>();
+  public onResponse = new MiddlewareProcessor<Response | any, any>();
+  public onError = new MiddlewareProcessor<Response | any, any>();
 
-    const next = async processedData => {
-      if (index < this.callbacks.length) {
-        const currentCallback = this.callbacks[index];
-        index++;
-        return currentCallback(processedData, next);
-      }
-
-      return processedData;
-    };
-
-    return next(data);
-  };
-}
-
-const createRestLoader = (defaultConfig: RequestInit) => {
-  const onRequest = new AsyncMiddleware();
-  const onResponse = new AsyncMiddleware();
-  const onError = new AsyncMiddleware();
-
-  const fetchWithDefaultConfig = async request => {
-    try {
-      const { url, config } = await onRequest.process(request);
-      const response = fetch(url, merge(config, defaultConfig));
-      const processedResponse = await onResponse.process(response);
-      return processedResponse;
-    } catch (error) {
-      const processedError = await onError.process(error);
-      throw processedError;
-    }
-  };
-
-  const createMethodFetcher = method => (
-    url: RequestInfo,
-    config: RequestInit
-  ) => fetchWithDefaultConfig({ url, config: merge(config, { method }) });
-
-  const get = createMethodFetcher("GET");
-  const post = createMethodFetcher("POST");
-  const put = createMethodFetcher("PUT");
-  const _delete = createMethodFetcher("DELETE");
-
-  const loader = new DataLoader((requests: Array<LoaderRequest>) =>
-    requests.map(({ url, config }) => get(url, config))
+  private defaultConfig: RequestConfig;
+  private loader = new DataLoader((requests: Array<ApiRequest>) =>
+    Promise.all(requests.map(({ url, config }) => this.get(url, config))),
   );
 
-  return {
-    get,
-    post,
-    put,
-    delete: _delete,
-    loader
-  };
-};
+  constructor(defaultConfig: RequestConfig) {
+    this.defaultConfig = defaultConfig;
+  }
 
-export { createRestLoader };
+  private async fetchWithDefaultConfig(request) {
+    try {
+      const { url, config } = await this.onRequest.process(request);
+      const requestConfig = merge(config, this.defaultConfig);
+      const fetch = requestConfig.fetch || require('node-fetch');
+      const response = await fetch(url, requestConfig);
+      const processedResponse = await this.onResponse.process(response);
+      return processedResponse;
+    } catch (error) {
+      const processedError = await this.onError.process(error);
+
+      if (processedError === error) {
+        throw error;
+      } else {
+        return processedError;
+      }
+    }
+  }
+
+  get(url: RequestInfo, config: RequestInit = {}) {
+    return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'GET' }) });
+  }
+
+  post(url: RequestInfo, config: RequestInit = {}) {
+    return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'POST' }) });
+  }
+
+  put(url: RequestInfo, config: RequestInit = {}) {
+    return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'PUT' }) });
+  }
+
+  delete(url: RequestInfo, config: RequestInit = {}) {
+    return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'DELETE' }) });
+  }
+
+  load(...args) {
+    return this.loader.load(...args);
+  }
+}
