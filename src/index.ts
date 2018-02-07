@@ -28,8 +28,13 @@ export class RestApi {
 
   private async fetchWithDefaultConfig(request) {
     try {
-      const { url, config } = await this.onRequest.process(request);
-      const requestConfig = merge(config, this.defaultConfig);
+      const requestConfig = merge(request.config, this.defaultConfig);
+
+      const { config, url } = await this.onRequest.process({
+        url: request.url,
+        config: requestConfig,
+      });
+
       const fetch = requestConfig.fetch || require('node-fetch');
       const response = await fetch(url, requestConfig);
       const processedResponse = await this.onResponse.process(response);
@@ -45,23 +50,24 @@ export class RestApi {
     }
   }
 
-  get(url: RequestInfo, config: RequestInit = {}) {
+  get(url: RequestInfo, config: RequestInit = {}): Promise<any> {
     return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'GET' }) });
   }
 
-  post(url: RequestInfo, config: RequestInit = {}) {
+  post(url: RequestInfo, config: RequestInit = {}): Promise<any> {
     return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'POST' }) });
   }
 
-  put(url: RequestInfo, config: RequestInit = {}) {
+  put(url: RequestInfo, config: RequestInit = {}): Promise<any> {
     return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'PUT' }) });
   }
 
-  delete(url: RequestInfo, config: RequestInit = {}) {
+  delete(url: RequestInfo, config: RequestInit = {}): Promise<any> {
     return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'DELETE' }) });
   }
 
-  load(...args) {
-    return this.loader.load(...args);
+  load(arg: String | ApiRequest): Promise<any> {
+    const request = arg.toString() === arg ? { url: arg } : arg;
+    return this.loader.load(arg);
   }
 }

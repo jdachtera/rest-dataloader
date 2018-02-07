@@ -1,8 +1,12 @@
 import { RestApi } from './index';
-
 import fetch from 'jest-fetch-mock';
+import merge from 'lodash/merge';
+import { request } from 'http';
 
 const asyncSleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+beforeEach(() => {
+  fetch.resetMocks();
+});
 
 describe('createRestLoader', () => {
   it('should create a loader which caches get requests', async () => {
@@ -23,6 +27,32 @@ describe('createRestLoader', () => {
 
     // Should be fetched only once as the data loader should cache the first request
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('should process the request middleware', async () => {
+    const loader = new RestApi({
+      fetch,
+    });
+
+    loader.onRequest.use(request =>
+      merge(request, {
+        config: {
+          headers: { authorization: 'Bearer blubb' },
+        },
+      }),
+    );
+
+    const mockResponseBody = { test: true };
+
+    fetch.mockResponseOnce(mockResponseBody);
+
+    const firstResponse = await loader.load({ url: 'http://example.org/api/v1/test' });
+
+    expect(fetch).toHaveBeenCalledWith('http://example.org/api/v1/test', {
+      headers: { authorization: 'Bearer blubb' },
+      fetch,
+      method: 'GET',
+    });
   });
 
   it('should process the response middleware', async () => {
@@ -58,7 +88,7 @@ describe('createRestLoader', () => {
 
     fetch.mockReject(mockResponseError);
 
-    const firstResponse = await loader.load('http://example.org/api/v1/test');
+    const firstResponse = await loader.load('http://example.org/api/v1/error');
 
     expect(firstResponse).toEqual('Error');
   });
