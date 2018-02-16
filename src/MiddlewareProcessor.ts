@@ -1,6 +1,6 @@
 import isPromise from 'is-promise';
 
-type Middleware<I, O> = (input: I, next: () => Promise<O>) => Promise<O> | O;
+export type Middleware<I, O> = (input: I, next: () => Promise<O>) => Promise<O> | O;
 
 export class MiddlewareProcessor<I = any, O = any> {
   private _callbacks = [];
@@ -18,7 +18,7 @@ export class MiddlewareProcessor<I = any, O = any> {
     return this._next();
   }
 
-  private _next = async (...args) => {
+  private async _next(...args) {
     if (args.length) {
       this._processedData = args[0];
     }
@@ -26,7 +26,7 @@ export class MiddlewareProcessor<I = any, O = any> {
     if (this._currentIndex < this._callbacks.length) {
       const currentCallback = this._callbacks[this._currentIndex];
       this._currentIndex++;
-      const returnValue = currentCallback(this._processedData, this._next);
+      const returnValue = currentCallback(this._processedData, this._next.bind(this));
 
       if (isPromise(returnValue)) {
         this._processedData = await returnValue;
@@ -37,5 +37,5 @@ export class MiddlewareProcessor<I = any, O = any> {
       await this._next();
     }
     return this._processedData;
-  };
+  }
 }

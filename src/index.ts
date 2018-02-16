@@ -1,42 +1,46 @@
 import DataLoader from 'dataloader';
 import merge from 'lodash/merge';
 
-import { MiddlewareProcessor } from './MiddlewareProcessor';
+import { MiddlewareProcessor, Middleware } from './MiddlewareProcessor';
 
-type RequestConfig = RequestInit & {
-  fetch: GlobalFetch;
+export type RequestConfig = RequestInit & {
+  fetch?: GlobalFetch;
 };
 
-type ApiRequest = {
+export type ApiRequest = {
   url: RequestInfo;
   config: RequestConfig;
 };
 
 export class RestApi {
-  public onRequest = new MiddlewareProcessor<ApiRequest, ApiRequest>();
-  public onResponse = new MiddlewareProcessor<Response | any, any>();
-  public onError = new MiddlewareProcessor<Response | any, any>();
+  private onRequest = new MiddlewareProcessor<ApiRequest, ApiRequest>();
+  private onResponse = new MiddlewareProcessor<Response | any, any>();
+  private onError = new MiddlewareProcessor<Response | any, any>();
 
   private defaultConfig: RequestConfig;
-  private loader = new DataLoader((requests: Array<ApiRequest>) =>
-    Promise.all(requests.map(({ url, config }) => this.get(url, config))),
+  private loader = new DataLoader(
+    (requests: Array<ApiRequest>) =>
+      Promise.all(requests.map(({ url, config }) => this.get(url, config))),
+    {
+      cacheKeyFn: (request: ApiRequest) => JSON.stringify(request),
+    },
   );
 
-  constructor(defaultConfig: RequestConfig) {
+  constructor(defaultConfig: RequestConfig = {}) {
     this.defaultConfig = defaultConfig;
   }
 
   private async fetchWithDefaultConfig(request) {
     try {
       const requestConfig = merge(request.config, this.defaultConfig);
-
-      const { config, url } = await this.onRequest.process({
+      const processedRequest = await this.onRequest.process({
         url: request.url,
         config: requestConfig,
       });
 
-      const fetch = requestConfig.fetch || require('node-fetch');
-      const response = await fetch(url, requestConfig);
+      const fetch = requestConfig.fetch || global['fetch'];
+
+      const response = await fetch(processedRequest.url, processedRequest.config);
       const processedResponse = await this.onResponse.process(response);
       return processedResponse;
     } catch (error) {
@@ -50,24 +54,44 @@ export class RestApi {
     }
   }
 
-  get(url: RequestInfo, config: RequestInit = {}): Promise<any> {
+  public get(url: RequestInfo, config: RequestInit = {}): Promise<any> {
     return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'GET' }) });
   }
 
-  post(url: RequestInfo, config: RequestInit = {}): Promise<any> {
+  public post(url: RequestInfo, config: RequestInit = {}): Promise<any> {
     return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'POST' }) });
   }
 
-  put(url: RequestInfo, config: RequestInit = {}): Promise<any> {
+  public put(url: RequestInfo, config: RequestInit = {}): Promise<any> {
     return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'PUT' }) });
   }
 
-  delete(url: RequestInfo, config: RequestInit = {}): Promise<any> {
+  public delete(url: RequestInfo, config: RequestInit = {}): Promise<any> {
     return this.fetchWithDefaultConfig({ url, config: merge(config, { method: 'DELETE' }) });
   }
 
-  load(arg: String | ApiRequest): Promise<any> {
-    const request = arg.toString() === arg ? { url: arg } : arg;
-    return this.loader.load(arg);
+  public load(url: RequestInfo, config: RequestInit = {}): Promise<any> {
+    return this.loader.load({ url, config });
+  }
+
+  public use({
+    onRequest,
+    onResponse,
+    onError,
+  }: {
+    onRequest?: Middleware<ApiRequest, ApiRequest>;
+    onResponse?: Middleware<Response | any, any>;
+    onError?: Middleware<Response | any, any>;
+  }) {
+    if (onRequest) {
+      this.onRequest.use(onRequest);
+    }
+    if (onResponse) {
+      this.onResponse.use(onResponse);
+    }
+    if (onError) {
+      this.onError.use(onError);
+    }
+    return this;
   }
 }

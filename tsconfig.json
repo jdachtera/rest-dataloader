@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "allowJs": true,
+    "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "baseUrl": "./",
     "rootDir": "./",
@@ -8,11 +8,13 @@
     "module": "es2015",
     "noEmit": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "pretty": true,
     "skipLibCheck": true,
+    "moduleResolution": "node",
     "sourceMap": true,
-    "lib": ["es2015", "esnext", "dom"]
+    "lib": ["es2015", "esnext", "dom"],
+    "declaration": true,
+    "declarationDir": "./lib"
   },
   "exclude": ["node_modules", "**/node_modules/*"]
 }

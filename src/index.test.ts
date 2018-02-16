@@ -1,18 +1,20 @@
+declare module 'jest-fetch-mock';
+
 import { RestApi } from './index';
 import fetch from 'jest-fetch-mock';
 import merge from 'lodash/merge';
-import { request } from 'http';
+
+global['fetch'] = fetch;
 
 const asyncSleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 beforeEach(() => {
+  global['fetch'] = fetch;
   fetch.resetMocks();
 });
 
 describe('createRestLoader', () => {
   it('should create a loader which caches get requests', async () => {
-    const loader = new RestApi({
-      fetch,
-    });
+    const loader = new RestApi();
 
     const mockResponseBody = { test: true };
 
@@ -30,43 +32,41 @@ describe('createRestLoader', () => {
   });
 
   it('should process the request middleware', async () => {
-    const loader = new RestApi({
-      fetch,
-    });
+    const loader = new RestApi();
 
-    loader.onRequest.use(request =>
-      merge(request, {
-        config: {
-          headers: { authorization: 'Bearer blubb' },
-        },
-      }),
-    );
+    loader.use({
+      onRequest: request =>
+        merge(request, {
+          config: {
+            headers: { authorization: 'Bearer blubb' },
+          },
+        }),
+    });
 
     const mockResponseBody = { test: true };
 
     fetch.mockResponseOnce(mockResponseBody);
 
-    const firstResponse = await loader.load({ url: 'http://example.org/api/v1/test' });
+    await loader.load('http://example.org/api/v1/test');
 
     expect(fetch).toHaveBeenCalledWith('http://example.org/api/v1/test', {
       headers: { authorization: 'Bearer blubb' },
-      fetch,
       method: 'GET',
     });
   });
 
   it('should process the response middleware', async () => {
-    const loader = new RestApi({
-      fetch,
-    });
+    const loader = new RestApi();
 
-    loader.onResponse.use((body, next) => next().then(body => body.test));
+    loader.use({ onResponse: (body, next) => next().then(body => body.test) });
 
-    loader.onResponse.use(response => response.body);
+    loader.use({ onResponse: response => response.body });
 
-    loader.onResponse.use(async body => {
-      await asyncSleep(20);
-      return body.response_body;
+    loader.use({
+      onResponse: async body => {
+        await asyncSleep(20);
+        return body.response_body;
+      },
     });
 
     const mockResponseBody = { response_body: { test: true } };
@@ -78,11 +78,9 @@ describe('createRestLoader', () => {
   });
 
   it('should process the error middleware', async () => {
-    const loader = new RestApi({
-      fetch,
-    });
+    const loader = new RestApi();
 
-    loader.onError.use(error => error.response_head.error_message);
+    loader.use({ onError: error => error.response_head.error_message });
 
     const mockResponseError = { response_head: { error_message: 'Error' } };
 
