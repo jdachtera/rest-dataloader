@@ -1,5 +1,6 @@
 import DataLoader from 'dataloader';
 import merge from 'lodash/merge';
+import 'universal-fetch';
 
 import { MiddlewareProcessor, Middleware } from './MiddlewareProcessor';
 
