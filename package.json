@@ -7,10 +7,10 @@
     "watch": "yarn rollup -c -w",
     "lint": "yarn tslint --project . && eslint src",
     "clean": "rimraf lib",
-    "prepublish": "yarn run clean && yarn run build",
+    "prepare": "yarn run clean && yarn run build",
     "start": "ts-node src/index.ts",
     "postinstall":
-      "ls lib 2> /dev/null > /dev/null || (yarn install --ignore-scripts && yarn prepublish)"
+      "ls lib 2> /dev/null > /dev/null || (yarn install --ignore-scripts && yarn prepare)"
   },
   "license": "MIT",
   "dependencies": {
