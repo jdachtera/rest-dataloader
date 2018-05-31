@@ -2,7 +2,7 @@
 import typescript from 'rollup-plugin-typescript2';
 import commonjs from 'rollup-plugin-commonjs';
 import resolve from 'rollup-plugin-node-resolve';
-import closure from 'rollup-plugin-closure-compiler';
+// import closure from 'rollup-plugin-closure-compiler';
 
 import pkg from './package.json';
 
@@ -12,7 +12,7 @@ export default {
     {
       file: 'lib/index.cjs.js',
       format: 'cjs',
-      name: 'RestLoader',
+      name: 'RestDataLoader',
       sourcemap: 'external',
     },
     {
@@ -30,9 +30,11 @@ export default {
       jsnext: true,
     }),
     commonjs(),
+    /*
     closure({
       module_resolution: 'NODE',
       processCommonJsModules: true,
     }),
+    */
   ],
 };
