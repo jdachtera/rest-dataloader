@@ -5,7 +5,7 @@ import 'universal-fetch';
 import { MiddlewareProcessor, Middleware } from './MiddlewareProcessor';
 
 export type RequestConfig = RequestInit & {
-  fetch?: GlobalFetch;
+  fetch?: GlobalFetch | Function;
 };
 
 export type ApiRequest = {
@@ -39,7 +39,7 @@ export class RestApi {
         config: requestConfig,
       });
 
-      const fetch = requestConfig.fetch || global['fetch'];
+      const fetch = processedRequest.config.fetch || global['fetch'];
 
       const response = await fetch(processedRequest.url, processedRequest.config);
       const processedResponse = await this.onResponse.process(response);

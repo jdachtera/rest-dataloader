@@ -1,6 +1,6 @@
 {
   "name": "rest-dataloader",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "lib/index.cjs.js",
   "module": "lib/index.es.js",
   "scripts": {
@@ -10,8 +10,7 @@
     "clean": "rimraf lib",
     "prepare": "yarn run clean && yarn run build",
     "start": "ts-node src/index.ts",
-    "postinstall":
-      "ls lib 2> /dev/null > /dev/null || (yarn install --ignore-scripts && yarn prepare)"
+    "postinstall": "ls lib 2> /dev/null > /dev/null || (yarn install --ignore-scripts && yarn prepare)"
   },
   "license": "MIT",
   "dependencies": {
@@ -48,11 +47,27 @@
     "transform": {
       "^.+\\.tsx?$": "ts-jest"
     },
-    "moduleFileExtensions": ["js", "jsx", "json", "ts", "node"],
+    "moduleFileExtensions": [
+      "js",
+      "jsx",
+      "json",
+      "ts",
+      "node"
+    ],
     "collectCoverage": true,
-    "collectCoverageFrom": ["src/**/*.{ts}"],
+    "collectCoverageFrom": [
+      "src/**/*.{ts}"
+    ],
     "coverageDirectory": "./coverage",
-    "coverageReporters": ["clover", "text", "text-summary", "lcov"],
-    "testMatch": ["**/src/?(*.)(spec|test).js?(x)", "**/src/?(*.)(spec|test).ts?(x)"]
+    "coverageReporters": [
+      "clover",
+      "text",
+      "text-summary",
+      "lcov"
+    ],
+    "testMatch": [
+      "**/src/?(*.)(spec|test).js?(x)",
+      "**/src/?(*.)(spec|test).ts?(x)"
+    ]
   }
 }

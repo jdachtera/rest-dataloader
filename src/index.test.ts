@@ -31,6 +31,32 @@ describe('createRestLoader', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it('should create a loader which caches get requests with config', async () => {
+    const loader = new RestApi();
+
+    const mockResponseBody = { test: true };
+
+    fetch.mockResponseOnce(mockResponseBody);
+
+    const firstResponse = await loader.load('http://example.org/api/v1/test?user=1&auth=zero', {
+      headers: {
+        AUthorization: 'Bearer broken',
+      },
+    });
+    expect(firstResponse.body).toEqual(mockResponseBody);
+
+    const secondResponse = await loader.load('http://example.org/api/v1/test?user=1&auth=zero', {
+      headers: {
+        AUthorization: 'Bearer broken',
+      },
+    });
+
+    expect(secondResponse.body).toEqual(mockResponseBody);
+
+    // Should be fetched only once as the data loader should cache the first request
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('should process the request middleware', async () => {
     const loader = new RestApi();
 
@@ -89,5 +115,43 @@ describe('createRestLoader', () => {
     const firstResponse = await loader.load('http://example.org/api/v1/error');
 
     expect(firstResponse).toEqual('Error');
+  });
+
+  it('uses the custom fetch implementation', async () => {
+    const recordedRequests = [];
+    const fetchImplementation = (...args) =>
+      new Promise(resolve => resolve(recordedRequests.push(args)));
+
+    const loader = new RestApi();
+
+    await loader.get('http://example.org/api/v1/test', { fetch: fetchImplementation });
+
+    expect(recordedRequests).toEqual([
+      ['http://example.org/api/v1/test', { fetch: fetchImplementation, method: 'GET' }],
+    ]);
+  });
+
+  it('uses the custom fetch implementation added by middleware', async () => {
+    const recordedRequests = [];
+    const fetchImplementation = (...args) =>
+      new Promise(resolve => resolve(recordedRequests.push(args)));
+
+    const loader = new RestApi();
+
+    loader.use({
+      onRequest: request => ({
+        url: request.url,
+        config: {
+          ...request.config,
+          fetch: fetchImplementation,
+        },
+      }),
+    });
+
+    await loader.get('http://example.org/api/v1/test');
+
+    expect(recordedRequests).toEqual([
+      ['http://example.org/api/v1/test', { fetch: fetchImplementation, method: 'GET' }],
+    ]);
   });
 });
