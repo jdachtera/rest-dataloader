@@ -77,7 +77,7 @@ describe('createRestLoader', () => {
 
     expect(fetch).toHaveBeenCalledWith('http://example.org/api/v1/test', {
       headers: { authorization: 'Bearer blubb' },
-      method: 'GET',
+      useLoader: true,
     });
   });
 

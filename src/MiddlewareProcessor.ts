@@ -2,40 +2,45 @@ import isPromise from 'is-promise';
 
 export type Middleware<I, O> = (input: I, next: () => Promise<O>) => Promise<O> | O;
 
+export class MiddlewareRequest<I = any, O = any> {
+  private currentIndex = 0;
+  constructor(private callbacks: Array<Middleware<I, O>>, private data) {}
+
+  async process(): Promise<O> {
+    return this.next();
+  }
+
+  private async next(...args) {
+    if (args.length) {
+      this.data = args[0];
+    }
+
+    if (this.currentIndex < this.callbacks.length) {
+      const currentCallback = this.callbacks[this.currentIndex];
+      this.currentIndex++;
+      const returnValue = currentCallback(this.data, this.next.bind(this));
+
+      if (isPromise(returnValue)) {
+        this.data = await returnValue;
+      } else {
+        this.data = returnValue;
+      }
+
+      await this.next();
+    }
+    return this.data;
+  }
+}
+
 export class MiddlewareProcessor<I = any, O = any> {
   private _callbacks = [];
-  private _currentIndex = 0;
-  private _processedData = null;
 
   use(callback: Middleware<I, O>) {
     this._callbacks.push(callback);
   }
 
   async process(data: I): Promise<O> {
-    this._currentIndex = 0;
-    this._processedData = data;
-
-    return this._next();
-  }
-
-  private async _next(...args) {
-    if (args.length) {
-      this._processedData = args[0];
-    }
-
-    if (this._currentIndex < this._callbacks.length) {
-      const currentCallback = this._callbacks[this._currentIndex];
-      this._currentIndex++;
-      const returnValue = currentCallback(this._processedData, this._next.bind(this));
-
-      if (isPromise(returnValue)) {
-        this._processedData = await returnValue;
-      } else {
-        this._processedData = returnValue;
-      }
-
-      await this._next();
-    }
-    return this._processedData;
+    const request = new MiddlewareRequest<I, O>(this._callbacks, data);
+    return request.process();
   }
 }
